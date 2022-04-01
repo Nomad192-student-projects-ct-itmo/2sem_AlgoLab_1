@@ -137,6 +137,10 @@ private:
         }
         return result;
     }
+    void assign_req(size_t cur_elm, size_t l, size_t r, type_tree v)
+    {
+
+    }
 
 public:
     void print()
