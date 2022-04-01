@@ -1,7 +1,8 @@
 *
-!/**/*.c
-!/**/*.cpp
-!/**/*.h
-!/**/*.hpp
-!/**/CMakeLists.txt
+!*/
+!*.c
+!*.cpp
+!*.h
+!*.hpp
+!CMakeLists.txt
 !.gitignore
