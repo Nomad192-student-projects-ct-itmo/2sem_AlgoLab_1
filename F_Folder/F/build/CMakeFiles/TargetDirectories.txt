@@ -1,0 +1,5 @@
+C:/Users/veren/Desktop/2sem_AlgoLab_1/F_Folder/F/build/CMakeFiles/F.dir
+C:/Users/veren/Desktop/2sem_AlgoLab_1/F_Folder/F/build/CMakeFiles/package.dir
+C:/Users/veren/Desktop/2sem_AlgoLab_1/F_Folder/F/build/CMakeFiles/package_source.dir
+C:/Users/veren/Desktop/2sem_AlgoLab_1/F_Folder/F/build/CMakeFiles/edit_cache.dir
+C:/Users/veren/Desktop/2sem_AlgoLab_1/F_Folder/F/build/CMakeFiles/rebuild_cache.dir
