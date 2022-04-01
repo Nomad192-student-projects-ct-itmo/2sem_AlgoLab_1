@@ -2,7 +2,5 @@
 !*/
 !*.c
 !*.cpp
-!*.h
-!*.hpp
 !CMakeLists.txt
-!.gitignore
+!/.gitignore
