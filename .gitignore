@@ -1,7 +1,8 @@
 *
-cmake-build-debug/
 !*/
 !*.c
 !*.cpp
 !CMakeLists.txt
 !/.gitignore
+cmake-build-debug/
+debug/
