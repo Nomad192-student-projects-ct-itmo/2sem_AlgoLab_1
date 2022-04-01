@@ -18,26 +18,27 @@ public:
         data = new Element [rl = 2*la];
         for (size_t i = 0; i < rl; i++)
         {
-            data[i].sum = 0;
-            data[i].min = MAX_VAL;
-            data[i].n_min = 1;
+            data[i].fd.asv = -1;
+            data[i].fd.min = 0;
             data[i].left = i - la;
             data[i].right = i - la + 1;
         }
         this->n = n;
-        current_add = 0;
+        //current_add = 0;
     }
     ~Tree()
     {
         delete[] data;
     }
 private:
+    typedef struct sub_element_t
+    {
+        long long asv;
+        type_tree min;
+    } Sub_Element;
     typedef struct element_t
     {
-        long long assigned_value;
-        type_tree sum;
-        type_tree min;
-        size_t n_min;
+        Sub_Element fd;
         size_t left;
         size_t right;
     } Element;
@@ -46,100 +47,75 @@ private:
     size_t la;
     Element *data;
     size_t n;
-    size_t current_add;
-    void ini()
+    //size_t current_add;
+    type_tree min_assign_rq(size_t el, size_t l, size_t r)
     {
-        for(size_t i = la - 1; i > 0; i--)
+        if(data[el].fd.asv != -1)
         {
-            data[i].sum = data[i*2].sum + data[i*2 + 1].sum;
-            data[i].min = MIN(data[i*2].min, data[i*2 + 1].min);
-
-            if(data[i*2].min == data[i*2 + 1].min)
-            {
-                data[i].n_min = data[i*2].n_min + data[i*2 + 1].n_min;
-            }
-            else
-            {
-                data[i].n_min = data[i*2].min < data[i*2 + 1].min ? data[i*2].n_min : data[i*2 + 1].n_min;
-            }
-
-            data[i].left = data[i*2].left;
-            data[i].right = data[i*2+1].right;
+            return data[el].fd.asv;
         }
-    }
-    type_tree sum_req(size_t cur_elm, size_t l, size_t r)
-    {
-#ifdef _DEBUG
-        printf("sum - %zu %zu %zu | %zu %zu\n", cur_elm, data[cur_elm].left, data[cur_elm].right, l, r);
-#endif
-        if(data[cur_elm].left == l && data[cur_elm].right == r)
+
+        if(data[el].left == l && data[el].right == r)
         {
-#ifdef _DEBUG
-            printf("r = %" TREE_SP "\n", data[cur_elm].sum);
-#endif
-            return data[cur_elm].sum;
+            return data[el].fd.min;
         }
 
 
-        type_tree result = 0;
-
-        if(l < data[cur_elm*2].right)
+        type_tree result;
+        if(l < data[el*2].right && r > data[el*2 + 1].left)
         {
-            result += sum_req(cur_elm*2, MAX(l, data[cur_elm*2].left), MIN(r, data[cur_elm*2].right));
+            type_tree left_min = min_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right));
+            type_tree right_min = min_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right));
+            result = MIN(left_min, right_min);
         }
-        if (r > data[cur_elm*2 + 1].left)
+        else if(l < data[el*2].right)
         {
-            result += sum_req(cur_elm*2 + 1, MAX(l, data[cur_elm*2 + 1].left), MIN(r, data[cur_elm*2 + 1].right));
+            result = min_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right));
         }
-
-        return result;
-    }
-    typedef struct min_answer
-    {
-        type_tree min;
-        size_t n_min;
-    } Min_Answer;
-    Min_Answer min_req(size_t cur_elm, size_t l, size_t r)
-    {
-#ifdef _DEBUG
-        printf("min - %zu %zu %zu | %zu %zu\n", cur_elm, data[cur_elm].left, data[cur_elm].right, l, r);
-#endif
-        if(data[cur_elm].left == l && data[cur_elm].right == r)
+        else //if (r > data[el*2 + 1].left)
         {
-#ifdef _DEBUG
-            printf("r = %" TREE_SP " %zu\n", data[cur_elm].min, data[cur_elm].n_min);
-#endif
-            return Min_Answer{data[cur_elm].min, data[cur_elm].n_min};
-        }
-
-
-        Min_Answer result;
-
-        if(l < data[cur_elm*2].right && r > data[cur_elm*2 + 1].left)
-        {
-            result = min_req(cur_elm*2, MAX(l, data[cur_elm*2].left), MIN(r, data[cur_elm*2].right));
-            Min_Answer buffer = min_req(cur_elm*2 + 1, MAX(l, data[cur_elm*2 + 1].left), MIN(r, data[cur_elm*2 + 1].right));
-            if(buffer.min == result.min)
-                result = Min_Answer {result.min, result.n_min + buffer.n_min};
-            else
-                result = Min_Answer {MIN(result.min, buffer.min), result.min < buffer.min ? result.n_min : buffer.n_min};
-        }
-        else
-        {
-            if(l < data[cur_elm*2].right)
-            {
-                result = min_req(cur_elm*2, MAX(l, data[cur_elm*2].left), MIN(r, data[cur_elm*2].right));
-            }
-            if (r > data[cur_elm*2 + 1].left)
-            {
-                result = min_req(cur_elm*2 + 1, MAX(l, data[cur_elm*2 + 1].left), MIN(r, data[cur_elm*2 + 1].right));
-            }
+            result =  min_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right));
         }
         return result;
     }
-    void assign_req(size_t cur_elm, size_t l, size_t r, type_tree v)
+    void set_assign_rq(size_t el, size_t l, size_t r, type_tree v)
     {
+        if(data[el].left == l && data[el].right == r)
+        {
+            data[el].fd.asv = (long long)v;
+            data[el].fd.min = v;
+            return;
+        }
 
+        if(data[el].fd.asv != -1)
+        {
+            data[el*2].fd.asv =  data[el].fd.asv;
+            data[el*2].fd.min =  data[el].fd.min;
+            data[el*2 + 1].fd.asv =  data[el].fd.asv;
+            data[el*2 + 1].fd.min =  data[el].fd.min;
+            data[el].fd.asv = -1;
+        }
+
+        if(v < data[el].fd.min)
+        {
+            data[el].fd.min = v;
+        }
+
+        if(l < data[el*2].right && r > data[el*2 + 1].left)
+        {
+            set_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right), v);
+            set_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right), v);
+        }
+        else if(l < data[el*2].right)
+        {
+            set_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right), v);
+        }
+        else //if (r > data[el*2 + 1].left)
+        {
+            set_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right), v);
+        }
+
+        data[el].fd.min = MIN(data[el*2].fd.min, data[el*2 + 1].fd.min);
     }
 
 public:
@@ -148,11 +124,22 @@ public:
 #ifdef _DEBUG
         printf("\n=============================================\n");
     for (size_t i = 1; i < rl; i++)
-        printf("|%zu %" TREE_SP " = %zu %zu|\n", i, data[i].sum, data[i].left, data[i].right);
+        printf("|%zu %" TREE_SP " %lld = %zu %zu|\n", i, data[i].fd.min, data[i].fd.asv, data[i].left, data[i].right);
     printf("=============================================\n");
 #endif
     }
-    void add(type_tree v)
+    void ini()
+    {
+        for(size_t i = la - 1; i > 0; i--)
+        {
+            data[i].fd.min = MIN(data[i*2].fd.min, data[i*2 + 1].fd.min);
+            data[i].fd.asv = -1;
+
+            data[i].left = data[i*2].left;
+            data[i].right = data[i*2+1].right;
+        }
+    }
+    /*void add(type_tree v)
     {
         if(current_add >= n)
         {
@@ -160,55 +147,19 @@ public:
             return;
         }
 
-        data[la + current_add].sum = v;
-        data[la + (current_add++)].min = v;
+        data[la + current_add].fd.min = v;
+        data[la + current_add].fd.asv = -1;
 
-        if(current_add == n)
+        if(++current_add == n)
             ini();
-    }
-    type_tree sum(size_t l, size_t r)
+    }*/
+    type_tree min_assign(size_t l, size_t r)
     {
-        if(current_add < n)
-        {
-            printf("Error: tree is not full\n");
-            return 0;
-        }
-        return sum_req(1, l, r);
+        return min_assign_rq(1, l, r);
     }
-    void min(size_t l, size_t r, type_tree *min, size_t *n_min)
+    void set_assign(size_t l, size_t r, type_tree v)
     {
-        Min_Answer answer = min_req(1, l, r);
-        *min = answer.min;
-        *n_min = answer.n_min;
-    }
-    void set(size_t ind, type_tree v)
-    {
-        if(current_add < n)
-        {
-            printf("Error: tree is not full\n");
-            return;
-        }
-        data[la + ind].sum = v;
-        data[la + ind].min = v;
-
-        for (size_t j = (la + ind) / 2; j > 0; j /= 2)
-        {
-            data[j].sum = data[j * 2].sum + data[j * 2 + 1].sum;
-            data[j].min = MIN(data[j*2].min, data[j*2 + 1].min);
-
-            if(data[j*2].min == data[j*2 + 1].min)
-            {
-                data[j].n_min = data[j*2].n_min + data[j*2 + 1].n_min;
-            }
-            else
-            {
-                data[j].n_min = data[j*2].min < data[j*2 + 1].min ? data[j*2].n_min : data[j*2 + 1].n_min;
-            }
-        }
-    }
-    void assign(size_t l, size_t r, type_tree v)
-    {
-
+        return set_assign_rq(1, l, r, v);
     }
 };
 
@@ -219,13 +170,14 @@ int main()
 
     Tree tree(n);
 
-    for (int i = 0; i < n; i++)
+    /*for (int i = 0; i < n; i++)
     {
         unsigned long long buffer;
         scanf("%llu", &buffer);
         tree.add(buffer);
-    }
+    }*/
 
+    tree.ini();
     tree.print();
 
     for(int i = 0; i < m; i++)
@@ -235,20 +187,18 @@ int main()
         switch (c) {
             case 1:
             {
-                size_t ind;
+                size_t l, r;
                 unsigned long long v;
-                scanf("%zu%llu", &ind, &v);
-                tree.set(ind, v);
+                scanf("%zu%zu%llu", &l, &r, &v);
+                tree.set_assign(l, r, v);
+                tree.print();
                 break;
             }
             case 2:
             {
                 size_t l, r;
                 scanf("%zu%zu", &l, &r);
-                unsigned long long min;
-                size_t n_min;
-                tree.min(l, r, &min, &n_min);
-                printf("%llu %zu\n", min, n_min);
+                printf("%llu\n", tree.min_assign(l, r));
                 break;
             }
             default:
@@ -257,7 +207,6 @@ int main()
                 return 2;
             }
         }
-        tree.print();
     }
 
     return 0;
