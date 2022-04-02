@@ -3,6 +3,7 @@
 //#define _DEBUG
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#define ADD(x, y) ((x) + (y))
 
 class Tree
 {
@@ -10,6 +11,8 @@ private:
     typedef unsigned long long type_tree;
 #define TREE_SP "llu"
 #define MAX_VAL (0xffffffffffffffff)
+#define OP ADD
+#define VALUE sum
 
 public:
     explicit Tree(size_t n)
@@ -19,7 +22,8 @@ public:
         for (size_t i = 0; i < rl; i++)
         {
             data[i].fd.asv = -1;
-            data[i].fd.min = 0;
+            data[i].fd.added = -1;
+            data[i].fd.VALUE = 0;
             data[i].left = i - la;
             data[i].right = i - la + 1;
         }
@@ -30,15 +34,16 @@ public:
     {
         delete[] data;
     }
-private:
-    typedef struct sub_element_t
+private: 
+    typedef struct assign_t
     {
-        long long asv;
-        type_tree min;
-    } Sub_Element;
+        unsigned char type;
+        type_tree val;
+    } Assign;
     typedef struct element_t
     {
-        Sub_Element fd;
+        Assign assign;
+        type_tree VALUE;
         size_t left;
         size_t right;
     } Element;
@@ -48,58 +53,91 @@ private:
     Element *data;
     size_t n;
     //size_t current_add;
-    type_tree min_assign_rq(size_t el, size_t l, size_t r)
+
+    void down (size_t el)
     {
+        if (el >= la)
+        {
+            data[el].fd.asv = -1;
+            data[el].fd.added = -1;
+            return;
+        }
         if(data[el].fd.asv != -1)
         {
-            return data[el].fd.asv;
+            data[el*2].fd.asv =  data[el].fd.asv;
+            data[el*2].fd.VALUE =  data[el].fd.asv * (data[el*2].right - data[el*2].left);
+            data[el*2 + 1].fd.asv =  data[el].fd.asv;
+            data[el*2 + 1].fd.VALUE =  data[el].fd.asv * (data[el*2 + 1].right - data[el*2 + 1].left);
+            data[el].fd.asv = -1;
+            return;
         }
+        if(data[el].fd.added != -1)
+        {
+            data[el*2].fd.added =  data[el].fd.added;
+            data[el*2].fd.VALUE +=  data[el].fd.added * (data[el*2].right - data[el*2].left);
+            data[el*2 + 1].fd.added =  data[el].fd.added;
+            data[el*2 + 1].fd.VALUE +=  data[el].fd.added * (data[el*2 + 1].right - data[el*2 + 1].left);
+            data[el].fd.added = -1;
+            return;
+        }
+    }
+
+    type_tree sum_assign_rq(size_t el, size_t l, size_t r)
+    {
+        /*if(data[el].fd.asv != -1)
+        {
+            return data[el].fd.asv * (r - l);
+        }*/
+
+        down(el);
+
 
         if(data[el].left == l && data[el].right == r)
         {
-            return data[el].fd.min;
+            //printf("sum += %zu %llu\n", el, data[el].fd.sum);
+            /*if(data[el].fd.asv != -1)
+            {
+                return data[el].fd.asv * (data[el].right - data[el].left);
+            }*/
+            return data[el].fd.VALUE;
         }
-
 
         type_tree result;
         if(l < data[el*2].right && r > data[el*2 + 1].left)
         {
-            type_tree left_min = min_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right));
-            type_tree right_min = min_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right));
-            result = MIN(left_min, right_min);
+            type_tree sum_left = sum_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right));
+            type_tree sum_right = sum_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right));
+            result = OP(sum_left, sum_right);
         }
         else if(l < data[el*2].right)
         {
-            result = min_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right));
+            result = sum_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right));
         }
         else //if (r > data[el*2 + 1].left)
         {
-            result =  min_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right));
+            result =  sum_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right));
         }
+        data[el].fd.VALUE = OP(data[el*2].fd.VALUE, data[el*2 + 1].fd.VALUE);
         return result;
     }
+
     void set_assign_rq(size_t el, size_t l, size_t r, type_tree v)
     {
+        down(el);
+
         if(data[el].left == l && data[el].right == r)
         {
             data[el].fd.asv = (long long)v;
-            data[el].fd.min = v;
+            data[el].fd.sum = v*(data[el].right - data[el].left);
             return;
         }
 
-        if(data[el].fd.asv != -1)
-        {
-            data[el*2].fd.asv =  data[el].fd.asv;
-            data[el*2].fd.min =  data[el].fd.min;
-            data[el*2 + 1].fd.asv =  data[el].fd.asv;
-            data[el*2 + 1].fd.min =  data[el].fd.min;
-            data[el].fd.asv = -1;
-        }
+        
 
-        if(v < data[el].fd.min)
+        /*if(v < data[el].fd.min)
         {
             data[el].fd.min = v;
-        }
+        }*/
 
         if(l < data[el*2].right && r > data[el*2 + 1].left)
         {
@@ -115,7 +153,46 @@ private:
             set_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right), v);
         }
 
-        data[el].fd.min = MIN(data[el*2].fd.min, data[el*2 + 1].fd.min);
+        data[el].fd.VALUE = OP(data[el*2].fd.VALUE, data[el*2 + 1].fd.VALUE);
+    }
+    
+    void add_assign_rq(size_t el, size_t l, size_t r, type_tree v)
+    {
+        down(el);
+        if(data[el].left == l && data[el].right == r)
+        {
+            /*if(data[el].fd.asv != -1)
+            {
+                data[el].fd.sum = data[el].fd.asv*(data[el].right - data[el].left);
+                data[el].fd.asv 
+            }*/
+
+            data[el].fd.added = (long long)v;
+            data[el].fd.sum += v*(data[el].right - data[el].left);
+            
+            return;
+        }
+
+        /*if(v < data[el].fd.min)
+        {
+            data[el].fd.min = v;
+        }*/
+
+        if(l < data[el*2].right && r > data[el*2 + 1].left)
+        {
+            add_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right), v);
+            add_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right), v);
+        }
+        else if(l < data[el*2].right)
+        {
+            add_assign_rq(el*2, MAX(l, data[el*2].left), MIN(r, data[el*2].right), v);
+        }
+        else //if (r > data[el*2 + 1].left)
+        {
+            add_assign_rq(el*2 + 1, MAX(l, data[el*2 + 1].left), MIN(r, data[el*2 + 1].right), v);
+        }
+
+        data[el].fd.VALUE = OP(data[el*2].fd.VALUE, data[el*2 + 1].fd.VALUE);
     }
 
 public:
@@ -124,7 +201,7 @@ public:
 #ifdef _DEBUG
         printf("\n=============================================\n");
     for (size_t i = 1; i < rl; i++)
-        printf("|%zu %" TREE_SP " %lld = %zu %zu|\n", i, data[i].fd.min, data[i].fd.asv, data[i].left, data[i].right);
+        printf("|%2zu %3" TREE_SP " %2lld %2lld = %zu %zu|\n", i, data[i].fd.VALUE, data[i].fd.asv, data[i].fd.added, data[i].left, data[i].right);
     printf("=============================================\n");
 #endif
     }
@@ -132,8 +209,9 @@ public:
     {
         for(size_t i = la - 1; i > 0; i--)
         {
-            data[i].fd.min = MIN(data[i*2].fd.min, data[i*2 + 1].fd.min);
+            data[i].fd.VALUE = 0;//OP(data[i*2].fd.VALUE, data[i*2 + 1].fd.VALUE);
             data[i].fd.asv = -1;
+            data[i].fd.added = -1;
 
             data[i].left = data[i*2].left;
             data[i].right = data[i*2+1].right;
@@ -153,13 +231,17 @@ public:
         if(++current_add == n)
             ini();
     }*/
-    type_tree min_assign(size_t l, size_t r)
+    type_tree sum_assign(size_t l, size_t r)
     {
-        return min_assign_rq(1, l, r);
+        return sum_assign_rq(1, l, r);
     }
     void set_assign(size_t l, size_t r, type_tree v)
     {
         return set_assign_rq(1, l, r, v);
+    }
+    void add_assign(size_t l, size_t r, type_tree v)
+    {
+        return add_assign_rq(1, l, r, v);
     }
 };
 
@@ -191,14 +273,21 @@ int main()
                 unsigned long long v;
                 scanf("%zu%zu%llu", &l, &r, &v);
                 tree.set_assign(l, r, v);
-                tree.print();
                 break;
             }
             case 2:
             {
                 size_t l, r;
+                unsigned long long v;
+                scanf("%zu%zu%llu", &l, &r, &v);
+                tree.add_assign(l, r, v);
+                break;
+            }
+            case 3:
+            {
+                size_t l, r;
                 scanf("%zu%zu", &l, &r);
-                printf("%llu\n", tree.min_assign(l, r));
+                printf("%llu\n", tree.sum_assign(l, r));
                 break;
             }
             default:
@@ -207,6 +296,7 @@ int main()
                 return 2;
             }
         }
+        tree.print();
     }
 
     return 0;
