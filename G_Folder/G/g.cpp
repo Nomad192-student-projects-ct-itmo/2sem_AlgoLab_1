@@ -65,36 +65,44 @@ private:
 
     void down (size_t el)
     {
+        Element *cur_node = &data[el];
         if (el >= la)
         {
-            //printf("down zero %zu\n", el);
-            data[el].assign = Assign {0, Type {NON}};
+            cur_node->assign = Assign {0, Type {NON}};
             return;
         }
+        Element *left__node = &data[lel(el)];
+        Element *right_node = &data[rel(el)];
 
-        switch (data[el].assign.type) {
+
+        switch (cur_node->assign.type) {
             case Type {SET}:
             {
-                //printf("down set %zu\n", el);
-                down(lel(el));
-                down(rel(el));
-                data[lel(el)].VALUE =  SET(data[lel(el)].VALUE, data[el].assign.val * (data[lel(el)].right - data[lel(el)].left));
-                data[rel(el)].VALUE =  SET(data[rel(el)].VALUE, data[el].assign.val * (data[rel(el)].right - data[rel(el)].left));
-                data[lel(el)].assign = data[el].assign;
-                data[rel(el)].assign = data[el].assign;
-                data[el].assign = Assign {0, Type {NON}};
+                left__node->VALUE = SET(left__node->VALUE, cur_node->assign.val * (left__node->right - left__node->left));
+                right_node->VALUE = SET(right_node->VALUE, cur_node->assign.val * (right_node->right - right_node->left));
+                left__node->assign = cur_node->assign;
+                right_node->assign = cur_node->assign;
+                cur_node->assign = Assign {0, Type {NON}};
                 break;
             }
             case Type {ADD}:
             {
-                //printf("down add %zu\n", el);
-                down(lel(el));
-                down(rel(el));
-                data[lel(el)].VALUE =  ADD(data[lel(el)].VALUE, data[el].assign.val * (data[lel(el)].right - data[lel(el)].left));
-                data[rel(el)].VALUE =  ADD(data[rel(el)].VALUE, data[el].assign.val * (data[rel(el)].right - data[rel(el)].left));
-                data[lel(el)].assign = data[el].assign;
-                data[rel(el)].assign = data[el].assign;
-                data[el].assign = Assign {0, Type {NON}};
+                left__node->VALUE = ADD(left__node->VALUE, cur_node->assign.val * (left__node->right - left__node->left));
+                right_node->VALUE = ADD(right_node->VALUE, cur_node->assign.val * (right_node->right - right_node->left));
+                left__node->assign.val = ADD(left__node->assign.val, cur_node->assign.val);
+                right_node->assign.val = ADD(right_node->assign.val, cur_node->assign.val);
+
+                if (left__node->assign.type == Type {SET})
+                    left__node->assign.type =  Type {SET};
+                else
+                    left__node->assign.type =  Type {ADD};
+
+                if (right_node->assign.type == Type {SET})
+                    right_node->assign.type =  Type {SET};
+                else
+                    right_node->assign.type =  Type {ADD};
+
+                cur_node->assign = Assign {0, Type {NON}};
                 break;
             }
             default:{}
