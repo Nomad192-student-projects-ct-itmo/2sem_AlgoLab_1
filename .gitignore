@@ -6,3 +6,4 @@
 !/.gitignore
 cmake-build-debug/
 debug/
+build/
