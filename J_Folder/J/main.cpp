@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#define _DEBUG
+//#define _DEBUG
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
@@ -17,17 +17,17 @@ private:
 #define NEU_TYPE_VAL 0x0
 #define NEU_VAL {NEU_TYPE_VAL, NEU_TYPE_VAL, 1}
 
-    typedef long long type_tree;
+    typedef long long tree_type;
     typedef struct value_t
     {
-        type_tree sum;
-        type_tree w_sum;
-        type_tree sum_w;
+        tree_type sum;
+        tree_type w_sum;
+        tree_type sum_w;
     } Value;
     typedef struct assign_t
     {
         OP_Type type;
-        type_tree val;
+        tree_type val;
     } Assign;
     typedef struct element_t
     {
@@ -38,8 +38,8 @@ private:
     } Element;
     static Value update(Value one, Value two, size_t len_one) {
         return Value{one.sum + two.sum,
-                     one.w_sum + two.w_sum + (two.sum * ((type_tree)len_one)),
-                     one.sum_w + two.sum_w + ((type_tree)len_one * (type_tree)len_one)};
+                     one.w_sum + two.w_sum + (two.sum * ((tree_type)len_one)),
+                     one.sum_w + two.sum_w + ((tree_type)len_one * (tree_type)len_one)};
     }
     static void operation(Element *el, Assign assign)
     {
@@ -50,13 +50,14 @@ private:
 #ifdef _DEBUG
                 printf("l=%zu r=%zu ADD_F\n", el->left, el->right);
 #endif
-                el->value.sum += assign.val * (type_tree)(el->right - el->left);
+                el->value.sum += assign.val * (tree_type)(el->right - el->left);
                 el->value.w_sum += assign.val * el->value.sum_w;
                 break;
             }
             case OP_Type{NON}:{return;}
         }
-        el->assign = assign;
+        el->assign.type = assign.type;
+        el->assign.val += assign.val;
     }
     void ini()
     {
@@ -85,7 +86,7 @@ public:
         this->n = n;
         current_add = 0;
     }
-    void ini_next(type_tree val)
+    void ini_next(tree_type val)
     {
         if(current_add >= n)
             return;
@@ -155,7 +156,7 @@ private:
         data[el].value = update(data[lel(el)].value, data[rel(el)].value, data[lel(el)].right - data[lel(el)].left);
     }
 
-    type_tree w_sum_rq(size_t el, size_t l, size_t r, type_tree w)
+    tree_type w_sum_rq(size_t el, size_t l, size_t r, tree_type w)
     {
         down(el);
 
@@ -167,12 +168,12 @@ private:
             return data[el].value.w_sum + data[el].value.sum * (w - 1);
         }
 
-        type_tree result = 0;
+        tree_type result = 0;
 
         if(l < data[lel(el)].right)
         {
             result += w_sum_rq(lel(el), MAX(l, data[lel(el)].left), MIN(r, data[lel(el)].right), w);
-            w += (type_tree) (MIN(r, data[lel(el)].right) - MAX(l, data[lel(el)].left));
+            w += (tree_type) (MIN(r, data[lel(el)].right) - MAX(l, data[lel(el)].left));
         }
         if (r > data[rel(el)].left)
         {
@@ -191,7 +192,7 @@ private:
         printf("%4" TREE_SP " ", data[i].value.sum_w);
     }
 
-    static const char * type_assign_to_string(OP_Type op_type)
+    static const char *type_assign_to_string(OP_Type op_type)
     {
         switch (op_type) {
             case OP_Type{ADD_F}: return "ADD_F";
@@ -230,17 +231,141 @@ public:
 #endif
     }
 
-    void add_assign(size_t l, size_t r, type_tree v)
+    void add_assign(size_t l, size_t r, tree_type v)
     {
         return assign_rq(1, l, r, Assign{ADD_F, v});
     }
-    type_tree w_sum(size_t l, size_t r)
+    tree_type w_sum(size_t l, size_t r)
     {
         return w_sum_rq(1, l, r, 1);
     }
 };
+
+class Test_Tree
+{
+private:
+    typedef long long tree_type;
+    size_t n;
+    size_t current_add;
+    tree_type *data;
+public:
+    explicit Test_Tree(size_t n)
+    {
+        this->n = n;
+        data = new tree_type [n];
+        current_add = 0;
+    }
+    void ini_next(tree_type val)
+    {
+        if(current_add >= n)
+            return;
+
+        data[current_add++] = val;
+    }
+    void add_assign(size_t l, size_t r, tree_type v)
+    {
+        while(l < r)
+            data[l++] += v;
+    }
+    tree_type w_sum(size_t l, size_t r)
+    {
+        tree_type result = 0;
+        for(tree_type i = 1; l < r; i++)
+            result += i*data[l++];
+        return result;
+    }
+};
+
+#include <cstdlib>
+#define TEST
+#define TEST_LEN_ARR (10)
+#define TEST_OP_N (5)
+#define TEST_N (100000)
+#define TEST_MAX_VAL (100)
+
 int main()
 {
+#ifdef TEST
+    long long arr[TEST_LEN_ARR];
+    size_t t[TEST_OP_N];
+    long long lf[TEST_OP_N];
+    long long rg[TEST_OP_N];
+    long long val[TEST_OP_N];
+
+    for (size_t length = 1; length < TEST_LEN_ARR; length++)
+    {
+        printf("    test len %d\n", length);
+        for(size_t n_attempt = 0; n_attempt < TEST_N; n_attempt++)
+        {
+            for(int c_j = 0; c_j < length; c_j++)
+            {
+                arr[c_j] = rand() % (TEST_MAX_VAL + 1);
+            }
+
+            size_t n = length;
+            Tree        norm_tree(n);
+            Test_Tree   test_tree(n);
+            for(size_t i = 0; i < n; i++)
+            {
+                norm_tree.ini_next(arr[i]);
+                test_tree.ini_next(arr[i]);
+            }
+
+
+            size_t m = (rand() % TEST_OP_N) + 1;
+
+
+            for(size_t i = 0; i < m; i++)
+            {
+                size_t type = (rand() %2) + 1;
+                t[i] = type;
+                size_t l = (rand() % length) + 1, r = (rand() % length) + 1;
+                switch (type) {
+                    case 1:
+                    {
+                        long long v = rand() % (TEST_MAX_VAL + 1) * (rand() % 2 ? 1 : -1);
+                        lf[i] = MIN(l, r);
+                        rg[i] = MAX(l, r);
+                        val[i] = v;
+                        norm_tree.add_assign(MIN(l, r) - 1, MAX(l, r), v);
+                        test_tree.add_assign(MIN(l, r) - 1, MAX(l, r), v);
+                        break;
+                    }
+                    case 2:
+                    {
+                        lf[i] = MIN(l, r);
+                        rg[i] = MAX(l, r);
+                        val[i] = 0;
+
+                        long long norm_tree_res = norm_tree.w_sum(MIN(l, r) - 1, MAX(l, r));
+                        long long test_tree_res = test_tree.w_sum(MIN(l, r) - 1, MAX(l, r));
+                        if(norm_tree_res != test_tree_res)
+                        {
+                            printf("Error test:\n");
+                            printf("%zu %zu\n", n, m);
+                            for(size_t j = 0; j < length; j++)
+                                printf("%lld ", arr[j]);
+                            printf("\n");
+                            for(size_t j = 0; j < i; j++)
+                            {
+                                printf("%zu %zu %zu", t[j], lf[j], rg[j]);
+                                if(t[j] == 1)
+                                    printf(" %lld", val[j]);
+                                printf("\n");
+                            }
+                            printf("norm tree=%lld, correct=%lld", norm_tree_res, test_tree_res);
+                            return 1;
+                        }
+                        break;
+                    }
+                    default: printf("Error type %zu\n", type); return -1;
+                }
+            }
+        }
+
+    }
+    printf("end tests\n");
+#else
     size_t n, m;
     scanf("%zu %zu", &n, &m);
     Tree tree(n);
@@ -255,28 +380,27 @@ int main()
 
     for(size_t i = m; i--;)
     {
-        size_t type;
-        scanf("%zu", &type);
+        size_t type, l, r;
+        scanf("%zu %zu %zu", &type, &l, &r);
+        l--;
         switch (type) {
             case 1:
             {
-                long long l, r, v;
-                scanf("%lld %lld %lld", &l, &r, &v);
-                l--;
+                long long v;
+                scanf("%lld", &v);
                 tree.add_assign(l, r, v);
                 break;
             }
             case 2:
             {
-                long long l, r;
-                scanf("%lld %lld", &l, &r);
-                l--;
+                printf("%lld\n", tree.w_sum(l, r));
                 break;
             }
             default: return -1;
         }
         tree.print();
     }
+#endif
 
     return 0;
 }
