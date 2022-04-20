@@ -6,11 +6,6 @@
 
 class Tree
 {
-private:
-    typedef unsigned long long type_tree;
-#define TREE_SP "llu"
-#define MIN_VAL (0x0)
-
 public:
     explicit Tree(size_t n)
     {
@@ -18,7 +13,7 @@ public:
         data = new Element [rl = 2*la];
         for (size_t i = 0; i < rl; i++)
         {
-            data[i].max = MIN_VAL;
+            data[i].sum = 0;
             data[i].left = i - la;
             data[i].right = i - la + 1;
         }
@@ -30,13 +25,14 @@ public:
         delete[] data;
     }
 private:
+    typedef unsigned long long ull;
     typedef struct element_t
     {
-        type_tree max;
+        ull sum;
+        ull min;
         size_t left;
         size_t right;
     } Element;
-
     size_t rl;
     size_t la;
     Element *data;
@@ -46,44 +42,37 @@ private:
     {
         for(size_t i = la - 1; i > 0; i--)
         {
-            data[i].max = MAX(data[i*2].max, data[i*2 + 1].max);
-
+            data[i].sum = data[i*2].sum + data[i*2 + 1].sum;
             data[i].left = data[i*2].left;
             data[i].right = data[i*2+1].right;
         }
     }
-    size_t rq_search(size_t el, type_tree x, size_t l)
+    ull sum_req(size_t cur_elm, size_t l, size_t r)
     {
-        //printf("rq_s %zu\n", el);
-        if(el >= la)
+#ifdef _DEBUG
+        printf("sum - %zu %zu %zu | %zu %zu\n", cur_elm, data[cur_elm].left, data[cur_elm].right, l, r);
+#endif
+        if(data[cur_elm].left == l && data[cur_elm].right == r)
         {
-            if(data[el].left < l)
-            {
-                return n;
-            }
-            else
-                return el - la;
+#ifdef _DEBUG
+            printf("r = %llu\n", data[cur_elm].sum);
+#endif
+            return data[cur_elm].sum;
         }
 
-        if(l < data[el*2 + 1].left)
+
+        ull result = 0;
+
+        if(l < data[cur_elm*2].right)
         {
-            size_t res;
-            if(data[el*2].max >= x)
-            {
-                res = rq_search(el*2, x, l);
-                if(res < n)
-                    return res;
-            }
-            if(data[el*2 + 1].max >= x)
-                return rq_search(el*2 + 1, x, l);
-            return n;
+            result += sum_req(cur_elm*2, MAX(l, data[cur_elm*2].left), MIN(r, data[cur_elm*2].right));
         }
-        else
+        if (r > data[cur_elm*2 + 1].left)
         {
-            if(data[el*2 + 1].max >= x)
-                return rq_search(el*2 + 1, x, l);
-            return n;
+            result += sum_req(cur_elm*2 + 1, MAX(l, data[cur_elm*2 + 1].left), MIN(r, data[cur_elm*2 + 1].right));
         }
+
+        return result;
     }
 
 public:
@@ -92,11 +81,11 @@ public:
 #ifdef _DEBUG
         printf("\n=============================================\n");
     for (size_t i = 1; i < rl; i++)
-        printf("|%zu %" TREE_SP " = %zu %zu|\n", i, data[i].max, data[i].left, data[i].right);
+        printf("|%zu %llu = %zu %zu|\n", i, data[i].sum, data[i].left, data[i].right);
     printf("=============================================\n");
 #endif
     }
-    void add(type_tree v)
+    void add(ull v)
     {
         if(current_add >= n)
         {
@@ -104,35 +93,31 @@ public:
             return;
         }
 
-        data[la + current_add++].max = v;
+        data[la + (current_add++)].sum = v;
 
         if(current_add == n)
             ini();
     }
-    void set(size_t ind, type_tree v)
+    ull sum(size_t l, size_t r)
+    {
+        if(current_add < n)
+        {
+            printf("Error: tree is not full\n");
+            return 0;
+        }
+        return sum_req(1, l, r);
+    }
+    void set(size_t ind, ull v)
     {
         if(current_add < n)
         {
             printf("Error: tree is not full\n");
             return;
         }
-        data[la + ind].max = v;
+        data[la + ind].sum = v;
 
         for (size_t j = (la + ind) / 2; j > 0; j /= 2)
-        {
-            data[j].max = MAX(data[j*2].max, data[j*2 + 1].max);
-        }
-    }
-    size_t search(type_tree x, size_t l)
-    {
-        if(current_add < n)
-        {
-            printf("Error: tree is not full\n");
-            return n;
-        }
-        if(data[1].max >= x)
-            return rq_search(1, x, l);
-        return n;
+            data[j].sum = data[j * 2].sum + data[j * 2 + 1].sum;
     }
 };
 
@@ -157,35 +142,27 @@ int main()
         int c;
         scanf("%d", &c);
         switch (c) {
-            case 1: {
-                size_t ind;
-                unsigned long long v;
-                scanf("%zu%llu", &ind, &v);
+            case 1:
+            {
+                int ind, v;
+                scanf("%d%d", &ind, &v);
                 tree.set(ind, v);
-                tree.print();
                 break;
             }
-            case 2: {
-                unsigned long long x;
-                size_t l;
-                scanf("%llu%zu", &x, &l);
-                size_t res = tree.search(x, l);
-                if(res >= n)
-                {
-                    printf("-1\n");
-                }
-                else
-                {
-                    printf("%zu\n", res);
-                }
-
+            case 2:
+            {
+                int l, r;
+                scanf("%d%d", &l, &r);
+                printf("%llu\n", tree.sum(l, r));
                 break;
             }
-            default: {
+            default:
+            {
                 printf("C is not 1 or 2\n");
                 return 2;
             }
         }
+        tree.print();
     }
 
     return 0;
