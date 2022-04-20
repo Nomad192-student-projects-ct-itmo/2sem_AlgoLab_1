@@ -1,2 +1,6 @@
 # 2sem_AlgoLab_1
-Segment Tree
+
+## АиСД, 2 семестр, 1 лаба 
+Segment Tree - Дерево Отрезков
+Sparse Table - Разреженные таблицы
+Scanline - Cканирующая прямая
