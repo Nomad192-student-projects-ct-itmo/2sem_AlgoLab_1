@@ -30,25 +30,3 @@ Scanline      - Cканирующая прямая
 ```
   
 </h2>
-
----
-```
-***
-```
-```
-<sub>i</sub>
-```
-```
-<sup>9</sup>
-```
-```
-<sup>5</sup>
-```
-```
-git pull
-```
-```
-git add .
-git commit -m "Update"
-git push
-```
