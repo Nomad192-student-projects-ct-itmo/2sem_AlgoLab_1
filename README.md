@@ -42,6 +42,9 @@ Scanline      - Cканирующая прямая
 <sup>9</sup>
 ```
 ```
+<sup>5</sup>
+```
+```
 git pull
 ```
 ```
