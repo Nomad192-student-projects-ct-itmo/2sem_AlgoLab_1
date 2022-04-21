@@ -23,3 +23,12 @@ Scanline      - Cканирующая прямая
 + N x30	Кассы
 - O x12	Операционные системы
 ```
+
+```git
+git pull
+```
+```
+git add .
+git commit -m "Update"
+git push
+```
